@@ -1,0 +1,21 @@
+{
+  "name": "voice-framework-boilerplate",
+  "version": "1.1.0",
+  "description": "boilerplate for ocelot-voice-framework-project",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint --fix --format table --cache .",
+    "test": "NODE_ENV=test jest"
+  },
+  "author": "Ocelot Consulting",
+  "license": "ISC",
+  "dependencies": {
+    "@ocelot-consulting/ocelot-voice-framework": "^1.1.74",
+    "robot3": "^0.2.21"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.1",
+    "eslint-plugin-node": "^11.1.0",
+    "jest": "^27.3.1"
+  }
+}
