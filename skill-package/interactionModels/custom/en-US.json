@@ -1,0 +1,371 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "ameren energy skill",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "ForgotIntent",
+          "samples": [
+            "what were we talking about again",
+            "what were we talking about",
+            "I forgot",
+            "forgot",
+            "can't remember",
+            "I can't remember",
+            "wait what"
+          ]
+        },
+        {
+          "name": "Billing",
+          "slots": [
+            {
+              "name": "goodAddress",
+              "type": "yesNoType",
+              "samples": [
+                "{goodAddress}"
+              ]
+            }
+          ],
+          "samples": [
+            "billing",
+            "what's my bill",
+            "bill this month",
+            "bill",
+            "check my bill",
+            "electricity bill",
+            "check electricity bill",
+            "check my electricity bill",
+            "what's my electricity bill"
+          ]
+        },
+        {
+          "name": "YesNoIntent",
+          "slots": [
+            {
+              "name": "yesNo",
+              "type": "yesNoType",
+              "samples": [
+                "{yesNo}"
+              ]
+            }
+          ],
+          "samples": [
+            "{yesNo}"
+          ]
+        },
+        {
+          "name": "PickALetterIntent",
+          "slots": [
+            {
+              "name": "letter",
+              "type": "aToEType",
+              "samples": [
+                "{letter}"
+              ]
+            }
+          ],
+          "samples": [
+            "{letter}"
+          ]
+        },
+        {
+          "name": "GoBackIntent",
+          "slots": [],
+          "samples": [
+            "go back",
+            "uh go back",
+            "can we go back",
+            "back",
+            "up menu",
+            "go back again"
+          ]
+        },
+        {
+          "name": "ResetIntent",
+          "slots": [],
+          "samples": [
+            "reset the game",
+            "reset",
+            "restart"
+          ]
+        },
+        {
+          "name": "OtherIntent",
+          "slots": [],
+          "samples": [
+            "Other",
+            "Something else",
+            "Another location"
+          ]
+        },
+        {
+          "name": "HomeIntent",
+          "slots": [],
+          "samples": [
+            "Home",
+            "My house",
+            "My home",
+            "Our home",
+            "Our house",
+            "home address"
+          ]
+        },
+        {
+          "name": "EstimatedRestoration",
+          "slots": [
+            {
+              "name": "goodAddress",
+              "type": "yesNoType",
+              "samples": [
+                "{goodAddress}"
+              ]
+            }
+          ],
+          "samples": [
+            "when will my power be back",
+            "how long until the power is back",
+            "restoration estimate",
+            "estimated time",
+            "estimated restoration time"
+          ]
+        },
+        {
+          "name": "ReportOutage",
+          "slots": [
+            {
+              "name": "goodAddress",
+              "type": "yesNoType",
+              "samples": [
+                "{goodAddress}"
+              ]
+            }
+          ],
+          "samples": [
+            "report outage",
+            "report an outage",
+            "my power is out",
+            "lost power",
+            "outage report"
+          ]
+        }
+      ],
+      "types": [
+        {
+          "name": "yesNoType",
+          "values": [
+            {
+              "id": "no",
+              "name": {
+                "value": "no",
+                "synonyms": [
+                  "no thanks",
+                  "nah",
+                  "negative",
+                  "incorrect",
+                  "never",
+                  "nope",
+                  "false"
+                ]
+              }
+            },
+            {
+              "id": "yes",
+              "name": {
+                "value": "yes",
+                "synonyms": [
+                  "sounds good",
+                  "yup",
+                  "yeah",
+                  "affirmative",
+                  "correct",
+                  "always",
+                  "ok",
+                  "sure",
+                  "true"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "aToEType",
+          "values": [
+            {
+              "id": "a",
+              "name": {
+                "value": "a",
+                "synonyms": [
+                  "ai",
+                  "aay",
+                  "hay",
+                  "ehy",
+                  "a"
+                ]
+              }
+            },
+            {
+              "id": "b",
+              "name": {
+                "value": "b",
+                "synonyms": [
+                  "b",
+                  "bee",
+                  "beee"
+                ]
+              }
+            },
+            {
+              "id": "c",
+              "name": {
+                "value": "c",
+                "synonyms": [
+                  "c",
+                  "cee",
+                  "ceeee"
+                ]
+              }
+            },
+            {
+              "id": "d",
+              "name": {
+                "value": "d",
+                "synonyms": [
+                  "d",
+                  "dee",
+                  "deeee"
+                ]
+              }
+            },
+            {
+              "id": "e",
+              "name": {
+                "value": "e",
+                "synonyms": [
+                  "ee",
+                  "eeee"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "dialog": {
+      "intents": [
+        {
+          "name": "Billing",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "goodAddress",
+              "type": "yesNoType",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "YesNoIntent",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "yesNo",
+              "type": "yesNoType",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "ForgotIntent",
+          "slots": [],
+          "confirmationRequired": false,
+          "prompts": {}
+        },
+        {
+          "name": "OtherIntent",
+          "slots": [],
+          "confirmationRequired": false,
+          "prompts": {}
+        },
+        {
+          "name": "HomeIntent",
+          "slots": [],
+          "confirmationRequired": false,
+          "prompts": {}
+        },
+        {
+          "name": "PickALetterIntent",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "letter",
+              "type": "aToEType",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "GoBackIntent",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": []
+        },
+        {
+          "name": "EstimatedRestoration",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "goodAddress",
+              "type": "yesNoType",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "ReportOutage",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "goodAddress",
+              "type": "yesNoType",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        }
+      ],
+      "delegationStrategy": "SKILL_RESPONSE"
+    },
+    "prompts": []
+  },
+  "version": "1"
+}

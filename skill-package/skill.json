@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "summary": "Sample Short Description",
+          "examplePhrases": [
+            "Alexa open the ameren energy skill",
+            "the ameren energy skill",
+            "ameren energy skill"
+          ],
+          "name": "voice-framework-boilerplate",
+          "description": "Sample Full Description"
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Sample Testing Instructions.",
+      "category": "KNOWLEDGE_AND_TRIVIA",
+      "distributionCountries": []
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "TODO REPLACE ME!"
+        },
+        "interfaces": [
+          {
+            "type": "CAN_FULFILL_INTENT_REQUEST"
+          }
+        ]
+      }
+    },
+    "manifestVersion": "1.0"
+  }
+}
