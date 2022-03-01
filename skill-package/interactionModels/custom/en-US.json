@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "ameren energy skill",
+      "invocationName": "energy skill",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",
