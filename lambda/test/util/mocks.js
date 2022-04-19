@@ -68,12 +68,10 @@ const { StateHandler } = initialize({
 })
 
 module.exports = {
-  StateHandler,
+  run: async input => StateHandler.handle(input),
   mockGetSession,
   mockSaveSession,
   getMockState,
   handlerInput,
-  getSlots,
   setSlots,
-  dialog,
 }

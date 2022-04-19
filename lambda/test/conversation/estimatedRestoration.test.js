@@ -1,12 +1,11 @@
 const { defaultSessionAttributes, defaultConversationAttributes, defaultYesNoIntent, defaultPickALetterIntent } = require('../util/defaults');
 const {
-  StateHandler,
+  run,
   mockGetSession,
   mockSaveSession,
   getMockState,
   handlerInput,
   setSlots,
-  dialog,
 } = require('../util/mocks')
 
 const fakePhoneNumber = '111-111-1111'
@@ -24,6 +23,8 @@ const defaultEstimatedRestorationMachineContext = () => ({
   address: "11477 Olde Cabin Rd Suite 320"
 })
 
+const dialog = jest.fn()
+
 describe('Estimated Restoration Conversation Tests', () => {
   beforeEach(async () => {
     dialog.mockRestore();
@@ -35,7 +36,7 @@ describe('Estimated Restoration Conversation Tests', () => {
     handlerInput.responseBuilder.addConfirmSlotDirective.mockClear()
     handlerInput.responseBuilder.withShouldEndSession.mockClear()
     handlerInput.responseBuilder.getResponse.mockClear()
-    await StateHandler.handle(handlerInput)
+    await run(handlerInput)
     handlerInput.requestEnvelope.request.type = 'IntentRequest';
     mockGetSession.mockClear()
     mockSaveSession.mockClear()
@@ -43,7 +44,7 @@ describe('Estimated Restoration Conversation Tests', () => {
 
   describe('routing logic', () => {
     it('Sends machine to askAboutAddress when new', async () => {
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(getMockState().machineState).toEqual('askAboutHomeOrOther')
       expect(getMockState().machineContext.address).toEqual('123 Company Dr')
@@ -51,7 +52,7 @@ describe('Estimated Restoration Conversation Tests', () => {
 
     it('Sends machine from askAboutHomeOrOther to pickFromListQuestion when user triggers OtherIntent', async () => {
       handlerInput.requestEnvelope.request.intent.name = 'OtherIntent'
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(getMockState().machineState).toEqual('pickFromListQuestion')
     })
@@ -72,7 +73,7 @@ describe('Estimated Restoration Conversation Tests', () => {
         }
       };
 
-      await StateHandler.handle(params);
+      await run(handlerInput);
 
       expect(dialog.mock.calls[0][0]).toEqual('estimatedRestoration.address.wrongAddress');
       expect(dialog.mock.calls[0][1]).toEqual({ website: fakeWebsite, phoneNumber: fakePhoneNumber });
@@ -92,7 +93,7 @@ describe('Estimated Restoration Conversation Tests', () => {
         }
       };
 
-      await StateHandler.handle(params);
+      await run(params);
 
       expect(dialog.mock.calls[0][0]).toEqual('estimatedRestoration.reply.other');
       expect(dialog.mock.calls[0][1]).toEqual({ estimate: '6 hours' });
@@ -112,7 +113,7 @@ describe('Estimated Restoration Conversation Tests', () => {
         }
       };
 
-      await StateHandler.handle(params);
+      await run(params);
 
       expect(dialog.mock.calls[0][0]).toEqual('home.error');
     });
@@ -128,7 +129,7 @@ describe('Estimated Restoration Conversation Tests', () => {
       handlerInput.attributesManager.setRequestAttributes(requestAttributes)
       handlerInput.attributesManager.setSessionAttributes({
         ...defaultSessionAttributes,
-        conversationAttributes:defaultConversationAttributes(true, true),
+        conversationAttributes: defaultConversationAttributes(true, true),
         state: {
           currentSubConversation: {
             confirmAddress: {
@@ -159,7 +160,7 @@ describe('Estimated Restoration Conversation Tests', () => {
 
       handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
 
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       const { state } = handlerInput.attributesManager.getSessionAttributes()
 
@@ -230,7 +231,7 @@ describe('Estimated Restoration Conversation Tests', () => {
 
       handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
 
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       const { state } = handlerInput.attributesManager.getSessionAttributes()
 
@@ -277,14 +278,14 @@ describe('Estimated Restoration Conversation Tests', () => {
       setSlots(slots)
 
       handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');
       handlerInput.responseBuilder.speak.mockClear();
 
       handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.confirm');
@@ -292,7 +293,7 @@ describe('Estimated Restoration Conversation Tests', () => {
 
       handlerInput.requestEnvelope.request.intent.name = 'YesNoIntent'
       setSlots(defaultYesNoIntent('yes').slots);
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.reply.home home.reEngage');
@@ -300,28 +301,28 @@ describe('Estimated Restoration Conversation Tests', () => {
 
       handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
       setSlots(slots)
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');
       handlerInput.responseBuilder.speak.mockClear();
 
       handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.reply.home home.reEngage');
       handlerInput.responseBuilder.speak.mockClear();
 
       handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');
       handlerInput.responseBuilder.speak.mockClear();
 
       handlerInput.requestEnvelope.request.intent.name = 'OtherIntent'
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.otherLocation.confirm');
@@ -329,7 +330,7 @@ describe('Estimated Restoration Conversation Tests', () => {
 
       handlerInput.requestEnvelope.request.intent.name = 'PickALetterIntent'
       setSlots(defaultPickALetterIntent().slots)
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.reply.other home.reEngage');
