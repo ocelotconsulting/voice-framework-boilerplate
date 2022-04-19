@@ -1,11 +1,16 @@
-const { mockGetSession, mockSaveSession } = require('../util/mockSessionAttributesService')
-const { estimatedRestoration } = require('../../conversation/estimatedRestoration')
-const { fakePhoneNumber, fakeWebsite } = require('../constants')
-const { handlerInput, setSlots } = require('../util/mockHandlerInput')
-const { StateHandler } = require('../../../../conversation');
-const { defaultSessionAttributes, defaultConversationAttributes, defaultYesNoIntent, defaultPickALetterIntent } = require('../defaults');
+const { defaultSessionAttributes, defaultConversationAttributes, defaultYesNoIntent, defaultPickALetterIntent } = require('../util/defaults');
+const {
+  StateHandler,
+  mockGetSession,
+  mockSaveSession,
+  getMockState,
+  handlerInput,
+  setSlots,
+  dialog,
+} = require('../util/mocks')
 
-const dialog = jest.fn();
+const fakePhoneNumber = '111-111-1111'
+const fakeWebsite = 'google.com'
 
 const defaultEstimatedRestorationMachineContext = () => ({
   selectedHome: false,
@@ -20,99 +25,40 @@ const defaultEstimatedRestorationMachineContext = () => ({
 })
 
 describe('Estimated Restoration Conversation Tests', () => {
-  describe('acceptIntent()', () => {
+  beforeEach(async () => {
+    dialog.mockRestore();
+    handlerInput.requestEnvelope.request.type = 'LaunchRequest';
+    handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
+    handlerInput.responseBuilder.speak.mockClear()
+    handlerInput.responseBuilder.reprompt.mockClear()
+    handlerInput.responseBuilder.addElicitSlotDirective.mockClear()
+    handlerInput.responseBuilder.addConfirmSlotDirective.mockClear()
+    handlerInput.responseBuilder.withShouldEndSession.mockClear()
+    handlerInput.responseBuilder.getResponse.mockClear()
+    await StateHandler.handle(handlerInput)
+    handlerInput.requestEnvelope.request.type = 'IntentRequest';
+    mockGetSession.mockClear()
+    mockSaveSession.mockClear()
+  });
+
+  describe('routing logic', () => {
     it('Sends machine to askAboutAddress when new', async () => {
-      const params = {
-        conversationStack: [],
-        currentSubConversation: { estimatedRestoration:{}},
-        sessionAttributes: {},
-        intent: {
-          name: 'EstimatedRestoration',
-          slots: {},
-        },
-        topConversation: true,
-        newConversation: false,
-        poppedConversation: false,
-        fallThrough: false,
-      };
+      await StateHandler.handle(handlerInput)
 
-      const {
-        conversationStack,
-        currentSubConversation,
-        sessionAttributes,
-        fallThrough,
-        pop,
-      } = await estimatedRestoration.acceptIntent(params);
-
-      expect(conversationStack).toEqual([]);
-      expect(currentSubConversation).toEqual({
-        estimatedRestoration:{
-          machineState: 'askAboutHomeOrOther',
-          machineContext: {
-            ...defaultEstimatedRestorationMachineContext(),
-            conversationAttributes: {},
-          },
-        },
-      });
-      expect(sessionAttributes).toEqual({ conversationAttributes: {}});
-      expect(fallThrough).toBeFalsy();
-      expect(pop).toBeFalsy();
+      expect(getMockState().machineState).toEqual('askAboutHomeOrOther')
+      expect(getMockState().machineContext.address).toEqual('123 Company Dr')
     })
 
-    it('Sends machine from askAboutHomeOrOther to selectOtherOutage when user triggers OtherIntent', async () => {
-      const params = {
-        conversationStack: [{
-          engagement: {
-            machineState: 'estimatedRestoration',
-            machineContext: {}
-          }
-        }],
-        currentSubConversation: {
-          estimatedRestoration: {
-            machineState: 'askAboutHomeOrOther',
-            machineContext: {
-              ...defaultEstimatedRestorationMachineContext(),
-              conversationAttributes: {},
-            },
-          },
-        },
-        sessionAttributes: {},
-        intent: {
-          name: 'OtherIntent',
-          slots: {},
-        },
-        topConversation: true,
-        newConversation: false,
-        poppedConversation: false,
-        fallThrough: false,
-      };
+    it('Sends machine from askAboutHomeOrOther to pickFromListQuestion when user triggers OtherIntent', async () => {
+      handlerInput.requestEnvelope.request.intent.name = 'OtherIntent'
+      await StateHandler.handle(handlerInput)
 
-      const {
-        conversationStack,
-        currentSubConversation,
-        sessionAttributes,
-        fallThrough,
-        pop,
-      } = await estimatedRestoration.acceptIntent(params);
-
-      expect(conversationStack).toEqual(params.conversationStack);
-      expect(currentSubConversation).toEqual({
-        pickAnOutage:{}
-      });
-      expect(sessionAttributes).toEqual({ conversationAttributes: {}});
-      expect(fallThrough).toBeFalsy();
-      expect(pop).toBeFalsy();
+      expect(getMockState().machineState).toEqual('pickFromListQuestion')
     })
   });
 
-  describe('craftResponse()', () => {
-    beforeEach(() => {
-      dialog.mockRestore();
-      mockGetSession.mockClear()
-      mockSaveSession.mockClear()
-    });
-
-    it('when address is incorrect, tells the user they must correct their address online or by phone to get a restoration estimate (badAddress)', () => {
+  describe('actual response', () => {
+    it('when address is incorrect, tells the user they must correct their address online or by phone to get a restoration estimate (badAddress)', async () => {
       const params = {
         dialog,
         subConversation: {
@@ -126,13 +72,13 @@ describe('Estimated Restoration Conversation Tests', () => {
         }
       };
 
-      estimatedRestoration.craftResponse(params);
+      await StateHandler.handle(params);
 
       expect(dialog.mock.calls[0][0]).toEqual('estimatedRestoration.address.wrongAddress');
       expect(dialog.mock.calls[0][1]).toEqual({ website: fakeWebsite, phoneNumber: fakePhoneNumber });
     });
 
-    it('when address is correct, gives the user their estimated restoration time (reportEstimateToUser)', () => {
+    it('when address is correct, gives the user their estimated restoration time (reportEstimateToUser)', async () => {
       const params = {
         dialog,
         subConversation: {
@@ -146,13 +92,13 @@ describe('Estimated Restoration Conversation Tests', () => {
         }
       };
 
-      estimatedRestoration.craftResponse(params);
+      await StateHandler.handle(params);
 
       expect(dialog.mock.calls[0][0]).toEqual('estimatedRestoration.reply.other');
       expect(dialog.mock.calls[0][1]).toEqual({ estimate: '6 hours' });
     });
 
-    it('gives the generic error response on errors (error)', () => {
+    it('gives the generic error response on errors (error)', async () => {
       const params = {
         dialog,
         subConversation: {
@@ -166,26 +112,13 @@ describe('Estimated Restoration Conversation Tests', () => {
         }
       };
 
-      estimatedRestoration.craftResponse(params);
+      await StateHandler.handle(params);
 
       expect(dialog.mock.calls[0][0]).toEqual('home.error');
     });
   });
 
   describe('systemic test', () => {
-    beforeEach(() => {
-      dialog.mockRestore();
-      handlerInput.requestEnvelope.request.type = 'IntentRequest';
-      handlerInput.responseBuilder.speak.mockClear()
-      handlerInput.responseBuilder.reprompt.mockClear()
-      handlerInput.responseBuilder.addElicitSlotDirective.mockClear()
-      handlerInput.responseBuilder.addConfirmSlotDirective.mockClear()
-      handlerInput.responseBuilder.withShouldEndSession.mockClear()
-      handlerInput.responseBuilder.getResponse.mockClear()
-      mockGetSession.mockClear()
-      mockSaveSession.mockClear()
-    });
-
     it('sends the machine to correctAddress after confirming address when user is asking about their home', async () => {
       const requestAttributes = {
         'estimatedRestoration.reply.other': 'estimatedRestoration.reply.other'
