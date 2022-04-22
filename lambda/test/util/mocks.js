@@ -30,7 +30,7 @@ const handlerInput = {
     },
   },
   responseBuilder: {
-    speak: jest.fn().mockReturnThis(),
+    speak: jest.fn(x => console.log('this is x: ', x)).mockReturnThis(),
     withShouldEndSession: jest.fn().mockReturnThis(),
     getResponse: jest.fn().mockReturnThis(),
     addElicitSlotDirective: jest.fn().mockReturnThis(),
@@ -59,6 +59,7 @@ const mockGetSession = jest.fn(() => handlerInput.attributesManager.getSessionAt
 const mockSaveSession = jest.fn(sessionAttributes => handlerInput.attributesManager.setSessionAttributes(sessionAttributes))
 
 const getMockState = () => mockGetSession().state.currentSubConversation[Object.keys(mockGetSession().state.currentSubConversation)[0]]
+const getResponse = () => handlerInput.responseBuilder.speak.mock.calls
 
 const { StateHandler } = initialize({
   conversationSet,
@@ -68,10 +69,11 @@ const { StateHandler } = initialize({
 })
 
 module.exports = {
-  run: async input => StateHandler.handle(input),
+  run: async input => await StateHandler.handle(input),
   mockGetSession,
   mockSaveSession,
   getMockState,
+  getResponse,
   handlerInput,
   setSlots,
 }
