@@ -9,9 +9,6 @@ const {
   setSlots,
 } = require('../util/mocks')
 
-const fakePhoneNumber = '111-111-1111'
-const fakeWebsite = 'google.com'
-
 const defaultEstimatedRestorationMachineContext = () => ({
   selectedHome: false,
   selectedOutage: '',
@@ -322,21 +319,54 @@ describe('Estimated Restoration Conversation Tests', () => {
       handlerInput.responseBuilder.speak.mockClear();
 
       handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
-      setSlots(slots)
+
+      // if the user asks for an estimate after already confirming their address, they get the estimate immediately
       await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');
+      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.reply.home');
       handlerInput.responseBuilder.speak.mockClear();
 
-      handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
-      await run(handlerInput)
+      const { state } = handlerInput.attributesManager.getSessionAttributes()
 
-      expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.reply.home home.reEngage');
-      handlerInput.responseBuilder.speak.mockClear();
+      expect(state.currentSubConversation).toEqual({
+        estimatedRestoration: {
+          machineState: 'reportEstimateToUser',
+          machineContext: {
+            selectedHome: true,
+            selectedOutage: '',
+            estimate: '3 hours',
+            misunderstandingCount: 0,
+            error: '',
+            previousMachineState: 'reportEstimateToUser',
+            resuming: false,
+            conversationAttributes: {
+              confirmAddress: {
+                confirmedAddress: true,
+                correctAddress: true,
+              },
+            },
+            address: '123 Company Dr'
+          }
+        }
+      })
+    })
 
-      handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
+    it('walks through the expected path of estimatedRestoration (second systemic test)', async () => {
+      handlerInput.attributesManager.setSessionAttributes({
+        ...handlerInput.attributesManager.getSessionAttributes(),
+        state: {
+          ...handlerInput.attributesManager.getSessionAttributes().state,
+          currentSubConversation: { estimatedRestoration: {
+            machineState: 'fresh',
+            machineContext: {},
+          }},
+          conversationStack: [],
+        },
+        conversationAttributes: {},
+      })
+      handlerInput.requestEnvelope.request.intent.name = 'EstimateRestoration'
+
       await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
@@ -355,28 +385,26 @@ describe('Estimated Restoration Conversation Tests', () => {
       await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.reply.other home.reEngage');
+      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.reply.other');
       handlerInput.responseBuilder.speak.mockClear();
 
       const { state } = handlerInput.attributesManager.getSessionAttributes()
 
       expect(state.currentSubConversation).toEqual({
-        engagement: {
-          machineState: 'resume',
+        estimatedRestoration: {
+          machineState: 'reportEstimateToUser',
           machineContext: {
+            selectedHome: false,
+            selectedOutage: '',
+            estimate: '3 hours',
+            misunderstandingCount: 0,
+            error: '',
+            previousMachineState: 'pickAnOutage',
             resuming: true,
-            previousMachineState: "estimatedRestoration",
-            conversationAttributes: {
-              confirmAddress: {
-                correctAddress: true,
-                confirmedAddress: true,
-              },
-              resume: {
-                wipeConversation: false,
-              }
-            },
-          },
-        },
+            conversationAttributes: {},
+            address: '123 Company Dr'
+          }
+        }
       })
     });
   });
