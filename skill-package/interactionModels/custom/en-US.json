@@ -146,6 +146,40 @@
           ]
         },
         {
+          "name": "ANumber",
+          "slots": [
+            {
+              "name": "number",
+              "type": "AMAZON.NUMBER",
+              "samples": [
+                "{number}"
+              ]
+            }
+          ],
+          "samples": [
+            "{number}",
+            "house number {number}",
+            "the number is {number}"
+          ]
+        },
+        {
+          "name": "APhoneNumber",
+          "slots": [
+            {
+              "name": "phoneNumber",
+              "type": "AMAZON.PhoneNumber",
+              "samples": [
+                "{phoneNumber}"
+              ]
+            }
+          ],
+          "samples": [
+            "{phoneNumber}",
+            "my number is {phoneNumber}",
+            "my phone number is {phoneNumber}"
+          ]
+        },
+        {
           "name": "ReportOutage",
           "slots": [
             {
@@ -301,6 +335,34 @@
           "slots": [],
           "confirmationRequired": false,
           "prompts": {}
+        },
+        {
+          "name": "ANumber",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "number",
+              "type": "AMAZON.NUMBER",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "APhoneNumber",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "phoneNumber",
+              "type": "AMAZON.PhoneNumber",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
         },
         {
           "name": "OtherIntent",
