@@ -1,130 +1,139 @@
-
-const { reportOutage } = require('../../conversation/reportOutage')
-const { fakePhoneNumber, fakeWebsite } = require('../../constants')
-
-const dialog = jest.fn();
+const {
+  run,
+  mockGetSession,
+  mockSaveSession,
+  getMockState,
+  getResponse,
+  handlerInput,
+  setSlots,
+} = require('../util/mocks')
 
 describe('Report Outage Conversation Tests', () => {
-  describe('acceptIntent()', () => {
-    it('Sends machine to askAboutAddress when new', async () => {
-      const params = {
-        conversationStack: [],
-        currentSubConversation: {reportOutage:{}},
-        sessionAttributes: {
-          previousPoppedConversation: ''
-        },
-        intent: {
-          name:'ReportOutage',
-          slots: {},
-        },
-        topConversation: true,
-        newConversation: false,
-        poppedConversation: false,
-        fallThrough: false,
-      };
+  beforeEach(async () => {
+    handlerInput.attributesManager.setRequestAttributes({
+      'home.welcome': 'home.welcome',
+      'home.engage': 'home.engage',
+      'home.promptResume': 'home.promptResume',
+      'home.error': 'home.error',
+      'confirmAddress.confirm': 'confirmAddress.confirm',
+      'confirmAddress.misheard': 'confirmAddress.misheard',
+      'reportOutage.wrongAddress': 'reportOutage.wrongAddress',
+      'reportOutage.reply.noContact': 'reportOutage.reply.noContact',
+    })
+    handlerInput.requestEnvelope.request.type = 'LaunchRequest'
+    await run(handlerInput)
+    handlerInput.requestEnvelope.request.intent.name = 'ReportOutage'
+    handlerInput.responseBuilder.speak.mockClear()
+    handlerInput.responseBuilder.reprompt.mockClear()
+    handlerInput.responseBuilder.addElicitSlotDirective.mockClear()
+    handlerInput.responseBuilder.addConfirmSlotDirective.mockClear()
+    handlerInput.responseBuilder.withShouldEndSession.mockClear()
+    handlerInput.responseBuilder.getResponse.mockClear()
+    handlerInput.requestEnvelope.request.type = 'IntentRequest'
+    mockGetSession.mockClear()
+    mockSaveSession.mockClear()
+  })
 
-      const {
-        conversationStack,
-        currentSubConversation,
-        sessionAttributes,
-        fallThrough,
-        pop,
-      } = await reportOutage.acceptIntent(params);
+  describe('routing tests', () => {
+    it('Sends machine to confirmAddress when new', async () => {
+      await run(handlerInput)
 
-      expect(conversationStack).toEqual([
-        {
-          reportOutage:{
-            machineState:"confirmAddress",
-            machineContext:{
-              conversationAttributes:{},
-              letThemKnow:"",
-              misunderstandingCount:0,
-              error:"",
-              previousMachineState: "fresh",
-              resuming: false
-            }
-          }
-        }
-      ]);
-      expect(currentSubConversation).toEqual(
-        {
-          confirmAddress: {}
-        }
-      );
-      expect(sessionAttributes).toEqual(
-        {
-          conversationAttributes:{},
-          previousPoppedConversation:''
-        }
-      );
-      expect(fallThrough).toBeFalsy();
-      expect(pop).toBeFalsy();
+      expect(getMockState().machineState).toEqual('yesNoQuestion')
+      expect(getResponse()[0][0]).toEqual('confirmAddress.confirm')
     })
 
 
-  });
-
-  describe('craftResponse()', () => {
-    beforeEach(() => {
-      dialog.mockRestore();
-    });
-
-    it('when address is incorrect, tells the user they must correct their address online or by phone to report outage (badAddress)', () => {
-      const params = {
-        dialog,
-        subConversation: {
-          reportOutage: {
-            machineState: 'incorrectAddress',
-            machineContext: {},
+    it('when address is incorrect, tells the user they must correct their address online or by phone to report outage (badAddress)', async () => {
+      handlerInput.attributesManager.setSessionAttributes({
+        ...handlerInput.attributesManager.getSessionAttributes(),
+        state: {
+          ...handlerInput.attributesManager.getSessionAttributes().state,
+          currentSubConversation: {
+            reportOutage: {
+              machineState: 'incorrectAddress',
+              machineContext: {
+                conversationAttributes: {
+                  confirmAddress: {
+                    confirmedAddress: true,
+                    correctAddress: false,
+                    resuming: true
+                  },
+                },
+              },
+            },
+          },
+          conversationStack: [],
+        },
+        conversationAttributes: {
+          confirmAddress: {
+            confirmedAddress: true,
+            correctAddress: false,
+            resuming: true,
           },
         },
-        sessionAttributes: {
-          previousPoppedConversation: ''
-        }
-      };
+      })
 
-      reportOutage.craftResponse(params);
+      await run(handlerInput)
 
-      expect(dialog.mock.calls[0][0]).toEqual('reportOutage.wrongAddress');
-      expect(dialog.mock.calls[0][1]).toEqual({ website: fakeWebsite, phoneNumber: fakePhoneNumber });
+      expect(getMockState().machineState).toEqual('incorrectAddress')
+      expect(getResponse()[0][0]).toEqual('reportOutage.wrongAddress')
     });
 
-    it('when address is correct, tells the user thanks for reporting(thanksForReporting)', () => {
-      const params = {
-        dialog,
-        subConversation: {
-          reportOutage: {
-            machineState: 'thanksForReporting',
-            machineContext: {},
+    it('when address is correct, tells the user thanks for reporting(thanksForReporting)', async () => {
+      handlerInput.attributesManager.setSessionAttributes({
+        ...handlerInput.attributesManager.getSessionAttributes(),
+        state: {
+          ...handlerInput.attributesManager.getSessionAttributes().state,
+          currentSubConversation: {
+            reportOutage: {
+              machineState: 'thanksForReporting',
+              machineContext: {
+                conversationAttributes: {
+                  confirmAddress: {
+                    confirmedAddress: true,
+                    correctAddress: true,
+                    resuming: true
+                  },
+                },
+              },
+            },
+          },
+          conversationStack: [],
+        },
+        conversationAttributes: {
+          confirmAddress: {
+            confirmedAddress: true,
+            correctAddress: true,
+            resuming: true,
           },
         },
-        sessionAttributes: {
-          previousPoppedConversation: ''
-        }
-      };
+      })
 
-      reportOutage.craftResponse(params);
+      await run(handlerInput)
 
-      expect(dialog.mock.calls[0][0]).toEqual('reportOutage.reply.noContact');
+      expect(getMockState().machineState).toEqual('thanksForReporting')
+      expect(getResponse()[0][0]).toEqual('reportOutage.reply.noContact')
     });
 
-    it('gives the generic error response on errors (error)', () => {
-      const params = {
-        dialog,
-        subConversation: {
-          reportOutage: {
-            machineState: 'error',
-            machineContext: { error: 'fake error' },
+    it('gives the generic error response on errors (error)', async () => {
+      handlerInput.attributesManager.setSessionAttributes({
+        ...handlerInput.attributesManager.getSessionAttributes(),
+        state: {
+          ...handlerInput.attributesManager.getSessionAttributes().state,
+          currentSubConversation: {
+            reportOutage: {
+              machineState: 'error',
+              machineContext: { error: 'fake error' },
+            },
           },
-        },
-        sessionAttributes: {
-          previousPoppedConversation: ''
+          conversationStack: [],
         }
-      };
+      })
 
-      reportOutage.craftResponse(params);
+      await run(handlerInput)
 
-      expect(dialog.mock.calls[0][0]).toEqual('home.error');
+      expect(getMockState().machineState).toEqual('error')
+      expect(getResponse()[0][0]).toEqual('home.error');
     });
-  });
+  })
 });

@@ -23,18 +23,6 @@ const defaultEstimatedRestorationMachineContext = () => ({
 
 describe('Estimated Restoration Conversation Tests', () => {
   beforeEach(async () => {
-    handlerInput.requestEnvelope.request.type = 'LaunchRequest';
-    await run(handlerInput)
-    handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
-    handlerInput.responseBuilder.speak.mockClear()
-    handlerInput.responseBuilder.reprompt.mockClear()
-    handlerInput.responseBuilder.addElicitSlotDirective.mockClear()
-    handlerInput.responseBuilder.addConfirmSlotDirective.mockClear()
-    handlerInput.responseBuilder.withShouldEndSession.mockClear()
-    handlerInput.responseBuilder.getResponse.mockClear()
-    handlerInput.requestEnvelope.request.type = 'IntentRequest';
-    mockGetSession.mockClear()
-    mockSaveSession.mockClear()
     handlerInput.attributesManager.setRequestAttributes({
       'estimatedRestoration.address.wrongAddress': 'estimatedRestoration.address.wrongAddress',
       'estimatedRestoration.homeOrOther.confirm': 'estimatedRestoration.homeOrOther.confirm',
@@ -49,11 +37,25 @@ describe('Estimated Restoration Conversation Tests', () => {
       'estimatedRestoration.goBack': 'estimatedRestoration.goBack',
       'resume.fresh': 'resume.fresh',
       'home.welcome': 'home.welcome',
+      'home.engage': 'home.engage',
       'home.promptResume': 'home.promptResume',
       'home.misheardResume': 'home.misheardResume',
       'estimatedRestoration.homeOrOther.confirm': 'estimatedRestoration.homeOrOther.confirm',
       'estimatedRestoration.resume': 'estimatedRestoration.resume',
+      'estimatedRestoration.otherLocation.misheard': 'estimateRestoration.otherLocation.misheard',
     })
+    handlerInput.requestEnvelope.request.type = 'LaunchRequest';
+    await run(handlerInput)
+    handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
+    handlerInput.responseBuilder.speak.mockClear()
+    handlerInput.responseBuilder.reprompt.mockClear()
+    handlerInput.responseBuilder.addElicitSlotDirective.mockClear()
+    handlerInput.responseBuilder.addConfirmSlotDirective.mockClear()
+    handlerInput.responseBuilder.withShouldEndSession.mockClear()
+    handlerInput.responseBuilder.getResponse.mockClear()
+    handlerInput.requestEnvelope.request.type = 'IntentRequest';
+    mockGetSession.mockClear()
+    mockSaveSession.mockClear()
   });
 
   describe('routing logic', () => {
@@ -170,7 +172,7 @@ describe('Estimated Restoration Conversation Tests', () => {
   describe('systemic test', () => {
     it('sends the machine to correctAddress after confirming address when user is asking about their home', async () => {
       handlerInput.attributesManager.setSessionAttributes({
-        ...defaultSessionAttributes,
+        ...defaultSessionAttributes(),
         conversationAttributes: defaultConversationAttributes(true, true),
         state: {
           currentSubConversation: {
@@ -292,12 +294,7 @@ describe('Estimated Restoration Conversation Tests', () => {
         conversationAttributes: {},
       })
 
-      console.log('before: ', handlerInput.attributesManager.getSessionAttributes())
-      // setSlots({})
       await run(handlerInput)
-
-      console.log('after: ', handlerInput.attributesManager.getSessionAttributes())
-
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');

@@ -1,377 +1,184 @@
-
-const { mockGetSession, mockSaveSession } = require('../util/mockSessionAttributesService')
-const { billing } = require('../../conversation/billing')
-const { fakePhoneNumber, fakeWebsite } = require('../constants')
-const { handlerInput, setSlots } = require('../util/mockHandlerInput')
- const { StateHandler } = require('../../conversation');
-
+const {
+  run,
+  mockGetSession,
+  mockSaveSession,
+  getMockState,
+  getResponse,
+  handlerInput,
+  setSlots,
+} = require('../util/mocks')
 const {
   defaultConversationAttributes,
   defaultSessionAttributes,
-  defaultParams,
   defaultYesNoIntent,
-  emptyIntent
-} = require('./subConversations/defaults')
-
-const dialog = jest.fn();
-
-const defaultBillingMachineContext = () => ({
-  conversationAttributes:defaultConversationAttributes(),
-  billAmount:"",
-  misunderstandingCount:0,
-  error:"",
-  previousMachineState: "fresh",
-  resuming: false
-})
-
-const defaultBillingConversation = () => ({
-  billing:{
-    machineState:"confirmAddress",
-    machineContext:defaultBillingMachineContext()
-  }
-})
+} = require('../util/defaults')
+const fetchBill = require('../../service/fetchBill')
 
 describe('Billing Conversation Tests', () => {
-  describe('acceptIntent()', () => {
-    it('Sends machine to confirmAddress when new', async () => {
-      const params = {...defaultParams(), intent: emptyIntent('Billing')};
+  beforeEach(async () => {
+    handlerInput.attributesManager.setRequestAttributes({
+      'home.welcome': 'home.welcome',
+      'home.engage': 'home.engage',
+      'confirmAddress.confirm': 'confirmAddress.confirm',
+      'confirmAddress.misheard': 'confirmAddress.misheard',
+      'billing.returnBill': 'billing.returnBill',
+      'billing.incorrectAddress': 'billing.incorrectAddress',
+      'estimatedRestoration.homeOrOther.confirm': 'estimatedRestoration.homeOrOther.confirm',
+      'estimatedRestoration.homeOrOther.misheard': 'estimatedRestoration.homeOrOther.misheard',
+      'confirmAddress.resume': 'confirmAddress.resume',
+      'estimatedRestoration.reply.home': 'estimatedRestoration.reply.home',
+      'home.reEngage': 'home.reEngage',
+      'home.promptResume': 'home.promptResume',
+    })
+    handlerInput.requestEnvelope.request.type = 'LaunchRequest'
+    await run(handlerInput)
+    handlerInput.requestEnvelope.request.intent.name = 'Billing'
+    handlerInput.responseBuilder.speak.mockClear()
+    handlerInput.responseBuilder.reprompt.mockClear()
+    handlerInput.responseBuilder.addElicitSlotDirective.mockClear()
+    handlerInput.responseBuilder.addConfirmSlotDirective.mockClear()
+    handlerInput.responseBuilder.withShouldEndSession.mockClear()
+    handlerInput.responseBuilder.getResponse.mockClear()
+    handlerInput.requestEnvelope.request.type = 'IntentRequest'
+    mockGetSession.mockClear()
+    mockSaveSession.mockClear()
+    jest.spyOn(fetchBill, 'generateRandomBillAmount').mockImplementation(() => '$100.00')
+    jest.spyOn(fetchBill, 'fetchBill').mockImplementation(async () => Promise.resolve({ billAmount: '$100.00' }))
+  })
 
-      const {
-        conversationStack,
-        currentSubConversation,
-        sessionAttributes,
-        fallThrough,
-        pop,
-      } = await billing.acceptIntent(params);
+  describe('routing logic', () => {
+    it('Sends machine to confirmAddress (yesNoQuestion) when new', async () => {
+      await run(handlerInput)
 
-      expect(conversationStack).toEqual([
-        defaultBillingConversation()
-      ]);
-      expect(currentSubConversation).toEqual(
-        {
-          "confirmAddress":{}
-        }
-      );
-      expect(sessionAttributes).toEqual(defaultSessionAttributes());
-      expect(fallThrough).toBeFalsy();
-      expect(pop).toBeFalsy();
+      expect(getMockState().machineState).toEqual('yesNoQuestion')
+      expect(getMockState().machineContext.alreadyAnswered(handlerInput.attributesManager.getSessionAttributes())).toBeFalsy();
+      expect(getResponse()[0][0]).toEqual('confirmAddress.confirm')
     })
 
-    it('Sends machine to correctAddress on correctAddress:true', async () => {
-      const params = {...defaultParams(),
-        currentSubConversation: {
-          billing: {...defaultBillingConversation().billing,
-            machineContext: {
-              ...defaultBillingMachineContext(),
-              conversationAttributes: defaultConversationAttributes(true, true),
-              previousMachineState: "confirmAddress"
-            }
-          }
+    it('Returns the user\'s bill when correctAddress: true', async () => {
+      handlerInput.attributesManager.setSessionAttributes({
+        ...handlerInput.attributesManager.getSessionAttributes(),
+        state: {
+          ...handlerInput.attributesManager.getSessionAttributes().state,
+          currentSubConversation: {
+            billing: {
+              machineState: 'correctAddress',
+              machineContext: {
+                conversationAttributes: {
+                  confirmAddress: {
+                    confirmedAddress: true,
+                    correctAddress: true,
+                  },
+                },
+              },
+            },
+          },
+          conversationStack: [],
         },
-        sessionAttributes: {...defaultSessionAttributes(),
-          conversationAttributes: defaultConversationAttributes(true, true)
+        conversationAttributes: {
+          confirmAddress: {
+            confirmedAddress: true,
+            correctAddress: true,
+          },
         },
-        intent: defaultYesNoIntent(),
-        poppedConversation:true
-      };
+      })
 
-      const {
-        conversationStack,
-        currentSubConversation,
-        sessionAttributes,
-        fallThrough,
-        pop,
-      } = await billing.acceptIntent(params);
+      await run(handlerInput)
 
-      expect(conversationStack).toEqual([]);
-      expect(currentSubConversation).toEqual(
-        {
-          billing:{ ...defaultBillingConversation().billing,
-            machineState:"reportBillToUser",
-            machineContext: {...defaultBillingMachineContext(),
-              conversationAttributes: defaultConversationAttributes(true, true),
-              billAmount:currentSubConversation.billing.machineContext.billAmount,
-              previousMachineState:"confirmAddress",
-              resuming: true
-            }
-          }
-        }
-      );
-      expect(sessionAttributes).toEqual({...defaultSessionAttributes(),
-        conversationAttributes:defaultConversationAttributes(true, true)
-      });
-      expect(fallThrough).toBeFalsy();
-      expect(pop).toBeTruthy();
+
+      expect(getMockState().machineState).toEqual('returnBill')
+      expect(getResponse()[0][0]).toEqual('billing.returnBill')
     })
 
-    it('Sends machine to incorrectAddress on correctAddress:false', async () => {
-      const params = {...defaultParams(),
-        currentSubConversation: defaultBillingConversation(),
-        poppedConversation: true
-      };
+    it('Sends user to incorrectAddress when correctAddress: false', async () => {
+      handlerInput.attributesManager.setSessionAttributes({
+        ...handlerInput.attributesManager.getSessionAttributes(),
+        state: {
+          ...handlerInput.attributesManager.getSessionAttributes().state,
+          currentSubConversation: {
+            billing: {
+              machineState: 'incorrectAddress',
+              machineContext: {
+                conversationAttributes: {
+                  confirmAddress: {
+                    confirmedAddress: true,
+                    correctAddress: false,
+                    resuming: true
+                  },
+                },
+              },
+            },
+          },
+          conversationStack: [],
+        },
+        conversationAttributes: {
+          confirmAddress: {
+            confirmedAddress: true,
+            correctAddress: false,
+            resuming: true,
+          },
+        },
+      })
 
-      const {
-        conversationStack,
-        currentSubConversation,
-        sessionAttributes,
-        fallThrough,
-        pop,
-      } = await billing.acceptIntent(params);
+      await run(handlerInput)
 
-      expect(conversationStack).toEqual([]);
-      expect(currentSubConversation).toEqual(
-        {
-          billing:{
-            ...defaultBillingConversation().billing,
-            machineState:"incorrectAddress",
-            machineContext:{
-              ...defaultBillingMachineContext(),
-              previousMachineState: "confirmAddress",
-              resuming: true
-            }
-          }
-        }
-      );
-      expect(sessionAttributes).toEqual(defaultSessionAttributes());
-      expect(fallThrough).toBeFalsy();
-      expect(pop).toBeTruthy();
+
+      expect(getMockState().machineState).toEqual('incorrectAddress')
+      expect(getResponse()[0][0]).toEqual('billing.incorrectAddress')
     })
-
-    it('Sends machine to reportBillToUser confirmedAddress true and correctAddress true', async () => {
-      const params = {
-        ...defaultParams(),
-        currentSubConversation: {
-          billing:{}
-        },
-        sessionAttributes: {
-          ...defaultSessionAttributes(),
-          conversationAttributes:defaultConversationAttributes(true, true)
-        },
-        intent: {
-          name:'test',
-          slots: {}
-        }
-      };
-
-      const {
-        conversationStack,
-        currentSubConversation,
-        sessionAttributes,
-        fallThrough,
-        pop,
-      } = await billing.acceptIntent(params);
-
-      expect(conversationStack).toEqual([]);
-      expect(currentSubConversation).toEqual(
-        {
-          billing:{
-            ...defaultBillingConversation().billing,
-            machineState:"reportBillToUser",
-            machineContext:{
-              ...defaultBillingMachineContext(),
-              conversationAttributes:defaultConversationAttributes(true, true),
-              billAmount:currentSubConversation.billing.machineContext.billAmount,
-              previousMachineState: "fresh",
-              resuming: false
-            }
-          }
-        }
-      );
-      expect(sessionAttributes).toEqual({
-        ...defaultSessionAttributes(),
-        conversationAttributes:defaultConversationAttributes(true, true)
-      });
-      expect(fallThrough).toBeFalsy();
-      expect(pop).toBeTruthy();
-    });
-
-    it('Sends machine to reportBillToUser confirmedAddress true and correctAddress true', async () => {
-      const params = {
-        ...defaultParams(),
-        currentSubConversation: {
-          billing:{}
-        },
-        sessionAttributes: {
-          ...defaultSessionAttributes(),
-          conversationAttributes:defaultConversationAttributes(true, false)
-        },
-        intent: {
-          name:'test',
-          slots: {}
-        }
-      };
-
-      const {
-        conversationStack,
-        currentSubConversation,
-        sessionAttributes,
-        fallThrough,
-        pop,
-      } = await billing.acceptIntent(params);
-
-      expect(conversationStack).toEqual([]);
-      expect(currentSubConversation).toEqual(
-        {
-          billing:{
-            ...defaultBillingConversation().billing,
-            machineState:"incorrectAddress",
-            machineContext:{
-              ...defaultBillingMachineContext(),
-              conversationAttributes:defaultConversationAttributes(true, false),
-              billAmount:currentSubConversation.billing.machineContext.billAmount,
-              previousMachineState: "fresh",
-              resuming: false
-            }
-          }
-        }
-      );
-      expect(sessionAttributes).toEqual({
-        ...defaultSessionAttributes(),
-          conversationAttributes:defaultConversationAttributes(true, false)
-      });
-      expect(fallThrough).toBeFalsy();
-      expect(pop).toBeTruthy();
-    });
-  });
-
-  describe('craftResponse()', () => {
-    beforeEach(() => {
-      dialog.mockRestore();
-      mockGetSession.mockClear()
-      mockSaveSession.mockClear()
-    });
-
-    it('when address is incorrect, tells the user they must correct their address online or by phone to get an accurate bill report (badAddress)', () => {
-      const params = {
-        dialog,
-        subConversation: {
-          billing: {
-            machineState: 'incorrectAddress',
-            machineContext: {},
-          },
-        },
-      };
-
-      billing.craftResponse(params);
-
-      expect(dialog.mock.calls[0][0]).toEqual('billing.wrongAddress');
-      expect(dialog.mock.calls[0][1]).toEqual({ website: fakeWebsite, phoneNumber: fakePhoneNumber });
-    });
-
-    it('when address is correct, tells the user their bill (reportBillToUser)', () => {
-      const params = {
-        dialog,
-        subConversation: {
-          billing: {
-            machineState: 'reportBillToUser',
-            machineContext: { billAmount: 'fake bill amount' },
-          },
-        },
-      };
-
-      billing.craftResponse(params);
-
-      expect(dialog.mock.calls[0][0]).toEqual('billing.returnBill');
-      expect(dialog.mock.calls[0][1]).toEqual({ billAmount: 'fake bill amount' });
-    });
-
-    it('gives the generic error response on errors (error)', () => {
-      const params = {
-        dialog,
-        subConversation: {
-          billing: {
-            machineState: 'error',
-            machineContext: { error: 'fake error' },
-          },
-        },
-      };
-
-      billing.craftResponse(params);
-
-      expect(dialog.mock.calls[0][0]).toEqual('home.error');
-    });
-  });
+  })
 
   describe('systemic test', () => {
-    beforeEach(() => {
-      dialog.mockRestore();
-      handlerInput.requestEnvelope.request.type = 'IntentRequest';
-      handlerInput.responseBuilder.speak.mockClear()
-      handlerInput.responseBuilder.reprompt.mockClear()
-      handlerInput.responseBuilder.addElicitSlotDirective.mockClear()
-      handlerInput.responseBuilder.addConfirmSlotDirective.mockClear()
-      handlerInput.responseBuilder.withShouldEndSession.mockClear()
-      handlerInput.responseBuilder.getResponse.mockClear()
-      mockGetSession.mockClear()
-      mockSaveSession.mockClear()
-    });
-
     it('walks through triggering uniqueness', async () => {
-      const requestAttributes = {
-        'confirmAddress.confirm': "confirmAddress.confirm",
-        "confirmAddress.misheard": "confirmAddress.misheard",
-        "estimatedRestoration.homeOrOther.confirm": "estimatedRestoration.homeOrOther.confirm",
-        "estimatedRestoration.homeOrOther.misheard": "estimatedRestoration.homeOrOther.misheard",
-        "confirmAddress.resume": "confirmAddress.resume",
-        "billing.returnBill": "billing.returnBill",
-        "estimatedRestoration.reply.home": "estimatedRestoration.reply.home",
-        "home.reEngage": "home.reEngage",
-      }
-      handlerInput.attributesManager.setRequestAttributes(requestAttributes)
       handlerInput.attributesManager.setSessionAttributes({
-        ...defaultSessionAttributes,
+        ...defaultSessionAttributes(),
         conversationAttributes:{
           ...defaultConversationAttributes(false, false),
         },
         state: {
           currentSubConversation: {
-            engagement: {}
+            billing: {}
           },
-          conversationStack: [
-          ],
-        }
+          conversationStack: [],
+        },
       })
 
-      const slots = {}
-      setSlots(slots)
+      await run(handlerInput)
 
-      handlerInput.requestEnvelope.request.intent.name = 'Billing'
-      await StateHandler.handle(handlerInput)
-
-      expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.confirm');
+      expect(getResponse().length).toEqual(1)
+      expect(getResponse()[0][0]).toEqual('confirmAddress.confirm');
       handlerInput.responseBuilder.speak.mockClear();
 
-      handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
-      await StateHandler.handle(handlerInput)
+      // handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
+      // await run(handlerInput)
 
-      expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');
-      handlerInput.responseBuilder.speak.mockClear();
+      // expect(getResponse().length).toEqual(1)
+      // expect(getResponse[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');
+      // handlerInput.responseBuilder.speak.mockClear();
 
-      handlerInput.requestEnvelope.request.intent.name = 'Billing'
-      await StateHandler.handle(handlerInput)
+      // handlerInput.requestEnvelope.request.intent.name = 'Billing'
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.misheard');
       handlerInput.responseBuilder.speak.mockClear();
 
-      handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
-      await StateHandler.handle(handlerInput)
+      // handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
+      // await run(handlerInput)
 
-      expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.misheard');
-      handlerInput.responseBuilder.speak.mockClear();
+      // expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
+      // expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.misheard');
+      // handlerInput.responseBuilder.speak.mockClear();
 
-      handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
-      await StateHandler.handle(handlerInput)
+      // handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
+      // await run(handlerInput)
 
-      expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.confirm');
-      handlerInput.responseBuilder.speak.mockClear();
+      // expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
+      // expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.confirm');
+      // handlerInput.responseBuilder.speak.mockClear();
 
-      handlerInput.requestEnvelope.request.intent.name = 'Billing'
-      await StateHandler.handle(handlerInput)
+      // handlerInput.requestEnvelope.request.intent.name = 'Billing'
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.misheard');
@@ -379,10 +186,10 @@ describe('Billing Conversation Tests', () => {
 
       handlerInput.requestEnvelope.request.intent.name = 'YesNoIntent'
       setSlots(defaultYesNoIntent('yes').slots);
-      await StateHandler.handle(handlerInput)
+      await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('billing.returnBill estimatedRestoration.reply.home home.reEngage');
+      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('billing.returnBill');
       handlerInput.responseBuilder.speak.mockClear();
 
       //should be in home or other
@@ -391,12 +198,20 @@ describe('Billing Conversation Tests', () => {
 
       expect(state.conversationStack).toEqual([])
       expect(state.currentSubConversation).toEqual({
-        engagement: {
-          machineState: 'resume',
+        billing: {
+          machineState: 'returnBill',
           machineContext: {
+            billAmount: '$324.91',
+            website: 'company.com',
+            phoneNumber: '314-333-3333',
+            previousMachineState: 'confirmAddress',
             resuming: true,
-            previousMachineState: "billing",
-            conversationAttributes: defaultConversationAttributes(true, true)
+            conversationAttributes: {
+              confirmAddress: { correctAddress: true, confirmedAddress: true },
+              resume: { wipeConversation: false }
+            },
+            error: '',
+            misunderstandingCount: 0
           }
         }
       })
