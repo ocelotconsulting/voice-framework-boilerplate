@@ -9,8 +9,8 @@ const {
 const { utils } = require('@ocelot-consulting/ocelot-voice-framework')
 const { fakePhoneNumber, fakeWebsite } = require('../constants')
 
-const callOutageApi = async ({houseNumber, phoneNumber, attemptCount}) => {
-  console.log('outage reported', houseNumber, phoneNumber, attemptCount)
+const callOutageApi = async ({houseNumber, phoneNumber}) => {
+  console.log('outage reported', houseNumber, phoneNumber)
 
   return [{
     result: 'noOutage'
@@ -21,18 +21,12 @@ const callOutageApi = async ({houseNumber, phoneNumber, attemptCount}) => {
     workDescription: 'Crews are on the scenen and expect repairs to complete in about an hour.'
   }, {
     result: 'badCombination'
-  }][attemptCount % 3]
+  }][houseNumber % 3]
 }
 
 const stateMap = {
   fresh: state(
-    transition('processIntent', 'askForHouseNumber',
-      guard(ctx => ctx.houseNumber === 0),
-    ),
-    transition('processIntent', 'askForTelephoneNumber',
-      guard(ctx => ctx.phoneNumber === ''),
-    ),
-    immediate('gotAllData'),
+    transition('processIntent', 'askForHouseNumber')
   ),
   askForHouseNumber: state(
     transition('processIntent', 'askForTelephoneNumber',

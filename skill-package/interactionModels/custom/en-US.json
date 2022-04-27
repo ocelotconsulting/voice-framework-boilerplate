@@ -159,6 +159,7 @@
           "samples": [
             "{number}",
             "house number {number}",
+            "the house number is {number}",
             "the number is {number}"
           ]
         },
@@ -175,8 +176,13 @@
           ],
           "samples": [
             "{phoneNumber}",
+            "phone number is {phoneNumber}",
+            "area code {phoneNumber}",
             "my number is {phoneNumber}",
-            "my phone number is {phoneNumber}"
+            "my phone number is {phoneNumber}",
+            "my telephone number is {phoneNumber}",
+            "the phone number is {phoneNumber}",
+            "the telephone number is {phoneNumber}"
           ]
         },
         {
