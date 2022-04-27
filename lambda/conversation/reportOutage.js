@@ -9,38 +9,57 @@ const {
 const { utils } = require('@ocelot-consulting/ocelot-voice-framework')
 const { fakePhoneNumber, fakeWebsite } = require('../constants')
 
-const callOutageApi = async () => {
-  console.log('outage reported')
+const callOutageApi = async ({houseNumber, phoneNumber}) => {
+  console.log('outage reported', houseNumber, phoneNumber)
+
+  return [{
+    result: 'noOutage'
+  }, {
+    result: 'yesOutage',
+    impact: '300',
+    areaDescription: 'The pines neighborhood north of Park Street',
+    workDescription: 'Crews are on the scenen and expect repairs to complete in about an hour.'
+  }, {
+    result: 'badCombination'
+  }][houseNumber % 3]
 }
 
 const stateMap = {
   fresh: state(
-    transition('processIntent', 'confirmAddress',
-      guard(({ conversationAttributes }) => !conversationAttributes.confirmAddress?.confirmedAddress),
+    transition('processIntent', 'askForHouseNumber')
+  ),
+  askForHouseNumber: state(
+    transition('processIntent', 'askForTelephoneNumber',
+      guard((ctx, { intent }) => intent.name === 'ANumber'),
+      reduce((ctx, { intent } ) => ({ ...ctx, houseNumber: intent.slots.number.value, misunderstandingCount: 0 }))
     ),
-    transition('processIntent', 'incorrectAddress',
-      guard(({ conversationAttributes }) => !conversationAttributes.confirmAddress?.correctAddress),
+    transition('processIntent', 'goBack',
+      guard(({ misunderstandingCount }, { intent }) => intent.name === 'GoBackIntent' || misunderstandingCount > 3)
     ),
-    transition('processIntent', 'letYouKnow',
-      guard(({ conversationAttributes }) => conversationAttributes.confirmAddress?.correctAddress),
+    transition('processIntent', 'askForHouseNumber',
+      reduce(ctx => ({ ...ctx, misunderstandingCount: ctx.misunderstandingCount + 1 })),
     ),
   ),
-  confirmAddress: state(
-    immediate('incorrectAddress',
-      guard(({ resuming, conversationAttributes }) => resuming && !conversationAttributes.confirmAddress?.correctAddress),
+  askForTelephoneNumber: state(
+    transition('processIntent', 'gotAllData',
+      guard((ctx, { intent }) => intent.name === 'APhoneNumber'),
+      reduce((ctx, { intent } ) => ({ ...ctx, phoneNumber: intent.slots.phoneNumber.value, misunderstandingCount: 0 }))
     ),
-    immediate('letYouKnow',
-      guard(({ resuming, conversationAttributes }) => resuming && conversationAttributes.confirmAddress?.correctAddress),
+    transition('processIntent', 'goBack',
+      guard(({ misunderstandingCount }, { intent }) => intent.name === 'GoBackIntent' || misunderstandingCount > 3)
+    ),
+    transition('processIntent', 'askForTelephoneNumber',
+      reduce(ctx => ({ ...ctx, misunderstandingCount: ctx.misunderstandingCount + 1 })),
     ),
   ),
   letYouKnow: state(
-    transition('processIntent', 'gotAllData',
+    transition('processIntent', 'thanksForReporting',
       guard((ctx, { intent }) => intent.name === 'YesNoIntent' && utils.getSlotValueId(intent.slots.yesNo) === 'yes'),
-      reduce(ctx => ({ ...ctx, letThemKnow: true }))
+      reduce(ctx => ({ ...ctx, letThemKnow: true, misunderstandingCount: 0 }))
     ),
-    transition('processIntent', 'gotAllData',
+    transition('processIntent', 'thanksForReporting',
       guard((ctx, { intent }) => intent.name === 'YesNoIntent' && utils.getSlotValueId(intent.slots.yesNo) === 'no'),
-      reduce(ctx => ({ ...ctx, letThemKnow: false }))
+      reduce(ctx => ({ ...ctx, letThemKnow: false, misunderstandingCount: 0 }))
     ),
     transition('processIntent', 'goBack',
       guard(({ misunderstandingCount }, { intent }) => intent.name === 'GoBackIntent' || misunderstandingCount > 3)
@@ -49,14 +68,70 @@ const stateMap = {
       reduce(ctx => ({ ...ctx, misunderstandingCount: ctx.misunderstandingCount + 1 })),
     ),
   ),
+  letYouKnowWOutageReport: state(
+    transition('processIntent', 'thanksForReporting',
+      guard((ctx, { intent }) => intent.name === 'YesNoIntent' && utils.getSlotValueId(intent.slots.yesNo) === 'yes'),
+      reduce(ctx => ({ ...ctx, letThemKnow: true, misunderstandingCount: 0 }))
+    ),
+    transition('processIntent', 'thanksForReporting',
+      guard((ctx, { intent }) => intent.name === 'YesNoIntent' && utils.getSlotValueId(intent.slots.yesNo) === 'no'),
+      reduce(ctx => ({ ...ctx, letThemKnow: false, misunderstandingCount: 0 }))
+    ),
+    transition('processIntent', 'goBack',
+      guard(({ misunderstandingCount }, { intent }) => intent.name === 'GoBackIntent' || misunderstandingCount > 3)
+    ),
+    transition('processIntent', 'letYouKnow',
+      reduce(ctx => ({ ...ctx, misunderstandingCount: ctx.misunderstandingCount + 1 })),
+    ),
+  ),
+  reportAnOutage: state(
+    transition('processIntent', 'letYouKnow',
+      guard((ctx, { intent }) => intent.name === 'YesNoIntent' && utils.getSlotValueId(intent.slots.yesNo) === 'yes'),
+      reduce(ctx => ({ ...ctx, reportingOutage: true, misunderstandingCount: 0 }))
+    ),
+    transition('processIntent', 'haveANiceDay',
+      guard((ctx, { intent }) => intent.name === 'YesNoIntent' && utils.getSlotValueId(intent.slots.yesNo) === 'no'),
+      reduce(ctx => ({ ...ctx, reportingOutage: false, misunderstandingCount: 0 }))
+    ),
+    transition('processIntent', 'goBack',
+      guard(({ misunderstandingCount }, { intent }) => intent.name === 'GoBackIntent' || misunderstandingCount > 3)
+    ),
+    transition('processIntent', 'reportAnOutage',
+      reduce(ctx => ({ ...ctx, misunderstandingCount: ctx.misunderstandingCount + 1 })),
+    ),
+  ),
+  tryAgain: state(
+    transition('processIntent', 'askForHouseNumber',
+      guard((ctx, { intent }) => intent.name === 'YesNoIntent' && utils.getSlotValueId(intent.slots.yesNo) === 'yes'),
+      reduce(ctx => ({ ...ctx, houseNumber: 0, phoneNumber: '', misunderstandingCount: 0 }))
+    ),
+    transition('processIntent', 'goBack',
+      guard((ctx, { intent }) => intent.name === 'YesNoIntent' && utils.getSlotValueId(intent.slots.yesNo) === 'no'),
+      reduce(ctx => ({ ...ctx, misunderstandingCount: 0 }))
+    ),
+    transition('processIntent', 'goBack',
+      guard(({ misunderstandingCount }, { intent }) => intent.name === 'GoBackIntent' || misunderstandingCount > 3)
+    ),
+    transition('processIntent', 'tryAgain',
+      reduce(ctx => ({ ...ctx, misunderstandingCount: ctx.misunderstandingCount + 1 })),
+    ),
+  ),
   gotAllData: invoke(callOutageApi,
-    transition('done', 'thanksForReporting'),
+    transition('done', 'reportAnOutage',
+      guard((ctx, {data: { result }}) => result === 'noOutage'),
+      reduce((ctx, { data }) => ({ ...ctx, attemptCount: ctx.attemptCount + 1 })),),
+    transition('done', 'letYouKnowWOutageReport',
+      guard((ctx, {data: { result }}) => result === 'yesOutage'),
+      reduce((ctx, { data }) => ({ ...ctx, attemptCount: ctx.attemptCount + 1, outageDetails: {...data} })),),
+    transition('done', 'tryAgain',
+      guard((ctx, {data: { result }}) => result === 'badCombination'),
+      reduce((ctx, { data }) => ({ ...ctx, attemptCount: ctx.attemptCount + 1 })),),
     transition('error', 'error',
       reduce((ctx, { error }) => ({ ...ctx, error })),
     )
   ),
   thanksForReporting: state(),
-  incorrectAddress: state(),
+  haveANiceDay: state(),
   error: state(),
   goBack: state(),
 };
@@ -64,19 +139,28 @@ const stateMap = {
 const reportOutage = {
   handle: ({ dialog, sessionAttributes }) => ({
     initialState: {
+      outageDetails: {},
+      attemptCount: 0,
+      houseNumber: 0,
+      phoneNumber: '',
+      reportAnOutage: '',
       letThemKnow: '',
+      reportingOutage: '',
       misunderstandingCount: 0,
       error: '',
     },
     stateMap,
-    transitionStates: 'confirmAddress',
     dialogMap: {
+      askForHouseNumber: ({ misunderstandingCount }) => dialog(`reportOutage.askForHouseNumber.${misunderstandingCount > 0 ? 'misheard' : 'confirm'}`),
+      askForTelephoneNumber: ({ misunderstandingCount }) => dialog(`reportOutage.askForTelephoneNumber.${misunderstandingCount > 0 ? 'misheard' : 'confirm'}`),
       letYouKnow: ({ misunderstandingCount }) => dialog(`reportOutage.letYouKnow.${misunderstandingCount > 0 ? 'misheard' : 'confirm'}`),
+      letYouKnowWOutageReport: ({ misunderstandingCount, outageDetails }) => dialog(`reportOutage.letYouKnowWOutageReport.${misunderstandingCount > 0 ? 'misheard' : 'confirm'}`, {...outageDetails}),
+      reportAnOutage: ({ misunderstandingCount }) => dialog(`reportOutage.reportAnOutage.${misunderstandingCount > 0 ? 'misheard' : 'confirm'}`),
+      tryAgain: ({ misunderstandingCount, houseNumber, phoneNumber }) => dialog(`reportOutage.tryAgain.${misunderstandingCount > 0 ? 'misheard' : 'confirm'}`, {houseNumber, phoneNumber}),
       thanksForReporting: ({ letThemKnow }) => dialog(`reportOutage.reply.${letThemKnow ? 'withContact' : 'noContact'}`),
-      incorrectAddress: () => dialog('reportOutage.wrongAddress', { website: fakeWebsite, phoneNumber: fakePhoneNumber }),
+      haveANiceDay: () => dialog(`reportOutage.reply.haveANiceDay`),
       error: () => dialog('home.error'),
     },
-    overrideResume: sessionAttributes.previousPoppedConversation === 'confirmAddress',
   }),
   intent: 'ReportOutage',
   canInterrupt: true,
