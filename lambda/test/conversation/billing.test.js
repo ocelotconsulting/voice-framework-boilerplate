@@ -1,3 +1,7 @@
+const fetchBill = require('../../service/fetchBill')
+jest.spyOn(fetchBill, 'generateRandomBillAmount').mockImplementation(() => '$100.00')
+jest.spyOn(fetchBill, 'fetchBill').mockImplementation(async () => ({ billAmount: '$100.00' }))
+
 const {
   run,
   mockGetSession,
@@ -12,7 +16,6 @@ const {
   defaultSessionAttributes,
   defaultYesNoIntent,
 } = require('../util/defaults')
-const fetchBill = require('../../service/fetchBill')
 
 describe('Billing Conversation Tests', () => {
   beforeEach(async () => {
@@ -29,6 +32,7 @@ describe('Billing Conversation Tests', () => {
       'estimatedRestoration.reply.home': 'estimatedRestoration.reply.home',
       'home.reEngage': 'home.reEngage',
       'home.promptResume': 'home.promptResume',
+      'home.misheardResume': 'home.misheardResume',
     })
     handlerInput.requestEnvelope.request.type = 'LaunchRequest'
     await run(handlerInput)
@@ -42,8 +46,6 @@ describe('Billing Conversation Tests', () => {
     handlerInput.requestEnvelope.request.type = 'IntentRequest'
     mockGetSession.mockClear()
     mockSaveSession.mockClear()
-    jest.spyOn(fetchBill, 'generateRandomBillAmount').mockImplementation(() => '$100.00')
-    jest.spyOn(fetchBill, 'fetchBill').mockImplementation(async () => Promise.resolve({ billAmount: '$100.00' }))
   })
 
   describe('routing logic', () => {
@@ -139,7 +141,10 @@ describe('Billing Conversation Tests', () => {
           currentSubConversation: {
             billing: {}
           },
-          conversationStack: [],
+          conversationStack: [{ home: {
+            machineState: 'billing',
+            machineContext: {},
+          } }],
         },
       })
 
@@ -149,35 +154,35 @@ describe('Billing Conversation Tests', () => {
       expect(getResponse()[0][0]).toEqual('confirmAddress.confirm');
       handlerInput.responseBuilder.speak.mockClear();
 
-      // handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
-      // await run(handlerInput)
+      handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
+      await run(handlerInput)
 
-      // expect(getResponse().length).toEqual(1)
-      // expect(getResponse[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');
-      // handlerInput.responseBuilder.speak.mockClear();
+      expect(getResponse().length).toEqual(1)
+      expect(getResponse()[0][0]).toEqual('estimatedRestoration.homeOrOther.confirm');
+      handlerInput.responseBuilder.speak.mockClear();
 
-      // handlerInput.requestEnvelope.request.intent.name = 'Billing'
+      handlerInput.requestEnvelope.request.intent.name = 'Billing'
       await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
       expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.misheard');
       handlerInput.responseBuilder.speak.mockClear();
 
-      // handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
-      // await run(handlerInput)
+      handlerInput.requestEnvelope.request.intent.name = 'EstimatedRestoration'
+      await run(handlerInput)
 
-      // expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      // expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.misheard');
-      // handlerInput.responseBuilder.speak.mockClear();
+      expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
+      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('estimatedRestoration.homeOrOther.misheard');
+      handlerInput.responseBuilder.speak.mockClear();
 
-      // handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
-      // await run(handlerInput)
+      handlerInput.requestEnvelope.request.intent.name = 'HomeIntent'
+      await run(handlerInput)
 
-      // expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      // expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.confirm');
-      // handlerInput.responseBuilder.speak.mockClear();
+      expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
+      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('confirmAddress.confirm');
+      handlerInput.responseBuilder.speak.mockClear();
 
-      // handlerInput.requestEnvelope.request.intent.name = 'Billing'
+      handlerInput.requestEnvelope.request.intent.name = 'Billing'
       await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
@@ -189,7 +194,7 @@ describe('Billing Conversation Tests', () => {
       await run(handlerInput)
 
       expect(handlerInput.responseBuilder.speak.mock.calls.length).toEqual(1)
-      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('billing.returnBill');
+      expect(handlerInput.responseBuilder.speak.mock.calls[0][0]).toEqual('billing.returnBill confirmAddress.resume  estimatedRestoration.reply.home home.reEngage');
       handlerInput.responseBuilder.speak.mockClear();
 
       //should be in home or other
@@ -198,13 +203,10 @@ describe('Billing Conversation Tests', () => {
 
       expect(state.conversationStack).toEqual([])
       expect(state.currentSubConversation).toEqual({
-        billing: {
-          machineState: 'returnBill',
+        home: {
+          machineState: 'resume',
           machineContext: {
-            billAmount: '$324.91',
-            website: 'company.com',
-            phoneNumber: '314-333-3333',
-            previousMachineState: 'confirmAddress',
+            previousMachineState: 'billing',
             resuming: true,
             conversationAttributes: {
               confirmAddress: { correctAddress: true, confirmedAddress: true },

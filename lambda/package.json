@@ -10,7 +10,7 @@
   "author": "Ocelot Consulting",
   "license": "ISC",
   "dependencies": {
-    "@ocelot-consulting/ocelot-voice-framework": "^1.1.74",
+    "@ocelot-consulting/ocelot-voice-framework": "^1.1.84",
     "robot3": "^0.2.21"
   },
   "devDependencies": {

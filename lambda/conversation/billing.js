@@ -56,6 +56,7 @@ const billing = {
   }),
   intent: 'Billing',
   canInterrupt: true,
+  shouldBeUnique: true,
 }
 
 module.exports = { billing }

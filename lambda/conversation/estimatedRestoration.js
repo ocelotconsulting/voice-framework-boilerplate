@@ -107,6 +107,7 @@ const estimatedRestoration = {
   intent: 'EstimatedRestoration',
   canInterrupt: true,
   description: 'how long it will take to restore power',
+  shouldBeUnique: true,
 }
 
 module.exports = { estimatedRestoration }

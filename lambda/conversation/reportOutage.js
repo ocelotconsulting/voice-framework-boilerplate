@@ -80,6 +80,7 @@ const reportOutage = {
   }),
   intent: 'ReportOutage',
   canInterrupt: true,
+  shouldBeUnique: true,
 }
 
 module.exports = { reportOutage }
