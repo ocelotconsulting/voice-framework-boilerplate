@@ -8,8 +8,10 @@ const {
   setSlots,
 } = require('../util/mocks')
 
+const { defaultNumberIntent, defaultPhoneNumberIntent, defaultYesNoIntent } = require('../util/defaults');
+
 describe('Report Outage Conversation Tests', () => {
-  beforeEach(async () => {
+  beforeAll(async () => {
     handlerInput.attributesManager.setRequestAttributes({
       'home.welcome': 'home.welcome',
       'home.engage': 'home.engage',
@@ -19,10 +21,17 @@ describe('Report Outage Conversation Tests', () => {
       'confirmAddress.misheard': 'confirmAddress.misheard',
       'reportOutage.wrongAddress': 'reportOutage.wrongAddress',
       'reportOutage.reply.noContact': 'reportOutage.reply.noContact',
+      'reportOutage.askForHouseNumber.confirm': 'reportOutage.askForHouseNumber.confirm',
+      'reportOutage.askForHouseNumber.misheard': 'reportOutage.askForHouseNumber.misheard',
+      'reportOutage.askForTelephoneNumber.confirm': 'reportOutage.askForTelephoneNumber.confirm',
+      'reportOutage.askForTelephoneNumber.misheard': 'reportOutage.askForTelephoneNumber.misheard',
     })
     handlerInput.requestEnvelope.request.type = 'LaunchRequest'
     await run(handlerInput)
-    handlerInput.requestEnvelope.request.intent.name = 'ReportOutage'
+    handlerInput.requestEnvelope.request.type = 'IntentRequest'
+  })
+
+  beforeEach(async () => {
     handlerInput.responseBuilder.speak.mockClear()
     handlerInput.responseBuilder.reprompt.mockClear()
     handlerInput.responseBuilder.addElicitSlotDirective.mockClear()
@@ -35,49 +44,43 @@ describe('Report Outage Conversation Tests', () => {
   })
 
   describe('routing tests', () => {
-    it('Sends machine to confirmAddress when new', async () => {
+    it('Sends machine to askForHouseNumber when new', async () => {
+      handlerInput.requestEnvelope.request.intent.name = 'ReportOutage'
       await run(handlerInput)
 
-      expect(getMockState().machineState).toEqual('yesNoQuestion')
-      expect(getResponse()[0][0]).toEqual('confirmAddress.confirm')
+      expect(getMockState().machineState).toEqual('askForHouseNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForHouseNumber.confirm')
     })
 
+    it('Sends machine to misheard when not a number', async () => {
 
-    it('when address is incorrect, tells the user they must correct their address online or by phone to report outage (badAddress)', async () => {
-      handlerInput.attributesManager.setSessionAttributes({
-        ...handlerInput.attributesManager.getSessionAttributes(),
-        state: {
-          ...handlerInput.attributesManager.getSessionAttributes().state,
-          currentSubConversation: {
-            reportOutage: {
-              machineState: 'incorrectAddress',
-              machineContext: {
-                conversationAttributes: {
-                  confirmAddress: {
-                    confirmedAddress: true,
-                    correctAddress: false,
-                    resuming: true
-                  },
-                },
-              },
-            },
-          },
-          conversationStack: [],
-        },
-        conversationAttributes: {
-          confirmAddress: {
-            confirmedAddress: true,
-            correctAddress: false,
-            resuming: true,
-          },
-        },
-      })
+      handlerInput.requestEnvelope.request.intent.name = 'YesNoIntent'
+      setSlots(defaultYesNoIntent('yes').slots);
+
+      await run(handlerInput)
+      
+      expect(getMockState().machineState).toEqual('askForHouseNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForHouseNumber.misheard')
+    })
+
+    it('Sends machine to saying house number sends them to ask for phone', async () => {
+
+      handlerInput.requestEnvelope.request.intent.name = 'ANumber'
+      setSlots(defaultNumberIntent(1234).slots);
 
       await run(handlerInput)
 
-      expect(getMockState().machineState).toEqual('incorrectAddress')
-      expect(getResponse()[0][0]).toEqual('reportOutage.wrongAddress')
-    });
+      expect(getMockState().machineState).toEqual('askForTelephoneNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForTelephoneNumber.confirm')
+    })
+
+    it('Sends machine to misheard when not a telephone number', async () => {
+
+      await run(handlerInput)
+      
+      expect(getMockState().machineState).toEqual('askForTelephoneNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForTelephoneNumber.misheard')
+    })
 
     it('when address is correct, tells the user thanks for reporting(thanksForReporting)', async () => {
       handlerInput.attributesManager.setSessionAttributes({
