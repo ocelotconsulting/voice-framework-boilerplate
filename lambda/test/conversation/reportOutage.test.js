@@ -19,6 +19,8 @@ describe('Report Outage Conversation Tests', () => {
       'confirmAddress.misheard': 'confirmAddress.misheard',
       'reportOutage.wrongAddress': 'reportOutage.wrongAddress',
       'reportOutage.reply.noContact': 'reportOutage.reply.noContact',
+      'reportOutage.askForHouseNumber.confirm': 'reportOutage.askForHouseNumber.confirm',
+      'reportOutage.askForHouseNumber.misheard': 'reportOutage.askForHouseNumber.misheard',
     })
     handlerInput.requestEnvelope.request.type = 'LaunchRequest'
     await run(handlerInput)
@@ -38,46 +40,9 @@ describe('Report Outage Conversation Tests', () => {
     it('Sends machine to confirmAddress when new', async () => {
       await run(handlerInput)
 
-      expect(getMockState().machineState).toEqual('yesNoQuestion')
-      expect(getResponse()[0][0]).toEqual('confirmAddress.confirm')
+      expect(getMockState().machineState).toEqual('askForHouseNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForHouseNumber.confirm')
     })
-
-
-    it('when address is incorrect, tells the user they must correct their address online or by phone to report outage (badAddress)', async () => {
-      handlerInput.attributesManager.setSessionAttributes({
-        ...handlerInput.attributesManager.getSessionAttributes(),
-        state: {
-          ...handlerInput.attributesManager.getSessionAttributes().state,
-          currentSubConversation: {
-            reportOutage: {
-              machineState: 'incorrectAddress',
-              machineContext: {
-                conversationAttributes: {
-                  confirmAddress: {
-                    confirmedAddress: true,
-                    correctAddress: false,
-                    resuming: true
-                  },
-                },
-              },
-            },
-          },
-          conversationStack: [],
-        },
-        conversationAttributes: {
-          confirmAddress: {
-            confirmedAddress: true,
-            correctAddress: false,
-            resuming: true,
-          },
-        },
-      })
-
-      await run(handlerInput)
-
-      expect(getMockState().machineState).toEqual('incorrectAddress')
-      expect(getResponse()[0][0]).toEqual('reportOutage.wrongAddress')
-    });
 
     it('when address is correct, tells the user thanks for reporting(thanksForReporting)', async () => {
       handlerInput.attributesManager.setSessionAttributes({
