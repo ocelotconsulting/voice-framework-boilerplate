@@ -28,6 +28,24 @@ const defaultParams = () => ({
   fallThrough: false,
 })
 
+const defaultNumberIntent = (value) => ({
+  name:'ANumber',
+  slots: {
+    number: {
+      value: value
+    },
+  },
+})
+
+const defaultPhoneNumberIntent = (value) => ({
+  name:'APhoneNumber',
+  slots: {
+    phoneNumber: {
+      value: value
+    },
+  },
+})
+
 const defaultYesNoIntent = (valueId = 'yes') => ({
   name:'YesNoIntent',
   slots: {
@@ -76,6 +94,8 @@ module.exports = {
   defaultConversationAttributes,
   defaultSessionAttributes,
   defaultParams,
+  defaultNumberIntent,
+  defaultPhoneNumberIntent,
   defaultYesNoIntent,
   defaultPickALetterIntent,
   emptyIntent
