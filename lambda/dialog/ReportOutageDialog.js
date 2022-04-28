@@ -17,7 +17,7 @@ const reportOutage = {
   },
   tryAgain: {
     confirm: [
-      `I'm sorry but house number {{houseNumber}} and phone number {{phoneNumber}} don't match our records. Would you like to try saying the numbers again?`
+      `I'm sorry but house number {{houseNumber}} and phone number <say-as interpret-as="telephone">{{phoneNumber}}</say-as> don't match our records. Would you like to try saying the numbers again?`
     ],
     misheard: [
       `Was that a yes or a no.`,

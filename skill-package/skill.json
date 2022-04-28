@@ -5,9 +5,9 @@
         "en-US": {
           "summary": "Sample Short Description",
           "examplePhrases": [
-            "Alexa open the energy skill",
-            "the energy skill",
-            "energy skill"
+            "Alexa open the innovation energy skill",
+            "the innovation energy skill",
+            "Innovation energy skill"
           ],
           "name": "voice-framework-boilerplate",
           "description": "Sample Full Description"
