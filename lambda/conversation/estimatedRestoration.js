@@ -84,10 +84,10 @@ const estimatedRestoration = {
     stateMap,
     transitionStates: [ 'confirmAddress', 'pickAnOutage' ],
     dialogMap: {
-      askAboutHomeOrOther: ({ misunderstandingCount }) => dialog(
+      askAboutHomeOrOther: ({ misunderstandingCount = 0 }) => dialog(
         `estimatedRestoration.homeOrOther.${misunderstandingCount > 0 ? 'misheard' : 'confirm'}`
       ),
-      selectOtherOutage: ({ misunderstandingCount }) => dialog(
+      selectOtherOutage: ({ misunderstandingCount = 0 }) => dialog(
         `estimatedRestoration.otherLocation.${misunderstandingCount > 0 ? 'misheard' : 'confirm'}`,
         { options: utils.objectMapToSpeech(outageOptions) }
       ),
@@ -107,6 +107,7 @@ const estimatedRestoration = {
   intent: 'EstimatedRestoration',
   canInterrupt: true,
   description: 'how long it will take to restore power',
+  shouldBeUnique: true,
 }
 
 module.exports = { estimatedRestoration }

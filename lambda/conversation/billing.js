@@ -7,20 +7,7 @@ const {
   guard,
 } = require('robot3')
 const { fakePhoneNumber, fakeWebsite } = require('../constants')
-
-const generateRandomBillAmount = () => {
-  const min = Math.ceil(0)
-  const max = Math.floor(500)
-  const decimalMax = Math.floor(99)
-
-  const dollars = Math.floor(Math.random() * (max - min + 1)) + min
-  const cents = Math.floor(Math.random() * (decimalMax - min + 1)) + min
-
-  return `$${dollars}.${cents}`
-}
-
-// replace this with an api call
-const fetchBillForAddress = async () => ({ billAmount: generateRandomBillAmount() })
+const { fetchBill } = require('../service/fetchBill')
 
 const stateMap = {
   fresh: state(
@@ -42,7 +29,7 @@ const stateMap = {
       guard(({ resuming, conversationAttributes }) => resuming && conversationAttributes.confirmAddress?.correctAddress),
     ),
   ),
-  correctAddress: invoke(fetchBillForAddress,
+  correctAddress: invoke(fetchBill,
     transition('done', 'returnBill',
       reduce((ctx, { data: { billAmount }}) => ({ ...ctx, billAmount })),
     ),
@@ -69,6 +56,7 @@ const billing = {
   }),
   intent: 'Billing',
   canInterrupt: true,
+  shouldBeUnique: true,
 }
 
 module.exports = { billing }
