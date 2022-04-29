@@ -74,7 +74,7 @@ describe('Report Outage Conversation Tests', () => {
       expect(getResponse()[0][0]).toEqual('reportOutage.askForHouseNumber.misheard')
     })
 
-    it('Sends machine to saying house number sends them to ask for phone', async () => {
+    it('Saying house number sends them to ask for phone', async () => {
 
       handlerInput.requestEnvelope.request.intent.name = 'ANumber'
       //1233 % 3 = 0 => No outage in your area
@@ -107,7 +107,7 @@ describe('Report Outage Conversation Tests', () => {
       expect(getResponse()[0][0]).toEqual('reportOutage.letYouKnowWOutageReport.confirm')
     })
 
-    it('Sends machine to calling API when getting phone number', async () => {
+    it('check misheard on let you know with outage', async () => {
 
       handlerInput.requestEnvelope.request.intent.name = 'ANumber'
       setSlots(defaultNumberIntent('10').slots);
@@ -308,7 +308,64 @@ describe('Report Outage Conversation Tests', () => {
 
     })
 
-    
+    it('test limit on number misunderstandings', async () => {
+      handlerInput.requestEnvelope.request.intent.name = 'ReportOutage'
+      await run(handlerInput)
+
+      handlerInput.requestEnvelope.request.intent.name = 'APhoneNumber'
+      setSlots(defaultPhoneNumberIntent('3143225555').slots);
+      clearResponseMocks()
+      await run(handlerInput)
+      expect(getMockState().machineState).toEqual('askForHouseNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForHouseNumber.misheard')
+
+      clearResponseMocks()
+      await run(handlerInput)
+      expect(getMockState().machineState).toEqual('askForHouseNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForHouseNumber.misheard')
+
+      clearResponseMocks()
+      await run(handlerInput)
+      expect(getMockState().machineState).toEqual('askForHouseNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForHouseNumber.misheard')
+
+      clearResponseMocks()
+      await run(handlerInput)
+      expect(getMockState().machineState).toEqual('askForHouseNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForHouseNumber.misheard')
+
+      clearResponseMocks()
+      await run(handlerInput)
+      expect(getMockState().machineState).toEqual('resume')
+      expect(getResponse()[0][0]).toEqual('home.reEngage')
+
+    })
+
+    it('test limit on phone number misunderstandings', async () => {
+      handlerInput.requestEnvelope.request.intent.name = 'ReportOutage'
+      await run(handlerInput)
+
+      handlerInput.requestEnvelope.request.intent.name = 'ANumber'
+      setSlots(defaultNumberIntent(1234).slots); //There's an outage
+      await run(handlerInput)
+      
+      handlerInput.requestEnvelope.request.intent.name = 'YesNoIntent'
+      setSlots(defaultYesNoIntent('yes').slots);
+      clearResponseMocks()
+      await run(handlerInput)
+      expect(getMockState().machineState).toEqual('askForTelephoneNumber')
+      expect(getResponse()[0][0]).toEqual('reportOutage.askForTelephoneNumber.misheard')
+
+      await run(handlerInput)
+      await run(handlerInput)
+      await run(handlerInput)
+      
+      clearResponseMocks()
+      await run(handlerInput)
+      expect(getMockState().machineState).toEqual('resume')
+      expect(getResponse()[0][0]).toEqual('home.reEngage')
+
+    })
 
     it('gives the generic error response on errors (error)', async () => {
       handlerInput.attributesManager.setSessionAttributes({
