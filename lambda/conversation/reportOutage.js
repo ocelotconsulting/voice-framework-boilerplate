@@ -7,22 +7,8 @@ const {
   guard,
 } = require('robot3')
 const { utils } = require('@ocelot-consulting/ocelot-voice-framework')
+const { reportOutageAPI } = require('../service/reportOutageAPI')
 const { fakePhoneNumber, fakeWebsite } = require('../constants')
-
-const callOutageApi = async ({houseNumber, phoneNumber}) => {
-  console.log('outage reported', houseNumber, phoneNumber)
-
-  return [{
-    result: 'noOutage'
-  }, {
-    result: 'yesOutage',
-    impact: '300',
-    areaDescription: 'The pines neighborhood north of Park Street',
-    workDescription: 'Crews are on the scenen and expect repairs to complete in about an hour.'
-  }, {
-    result: 'badCombination'
-  }][houseNumber % 3]
-}
 
 const stateMap = {
   fresh: state(
@@ -80,7 +66,7 @@ const stateMap = {
     transition('processIntent', 'goBack',
       guard(({ misunderstandingCount }, { intent }) => intent.name === 'GoBackIntent' || misunderstandingCount > 3)
     ),
-    transition('processIntent', 'letYouKnow',
+    transition('processIntent', 'letYouKnowWOutageReport',
       reduce(ctx => ({ ...ctx, misunderstandingCount: ctx.misunderstandingCount + 1 })),
     ),
   ),
@@ -116,7 +102,7 @@ const stateMap = {
       reduce(ctx => ({ ...ctx, misunderstandingCount: ctx.misunderstandingCount + 1 })),
     ),
   ),
-  gotAllData: invoke(callOutageApi,
+  gotAllData: invoke(reportOutageAPI,
     transition('done', 'reportAnOutage',
       guard((ctx, {data: { result }}) => result === 'noOutage'),
       reduce((ctx, { data }) => ({ ...ctx, attemptCount: ctx.attemptCount + 1 })),),
